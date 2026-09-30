@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f596c" />
+    <title>任意裁 - 简单图片编辑器</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="任意裁首页">
+          <span class="brand-mark">裁</span>
+          <span class="brand-copy">
+            <strong>任意裁</strong>
+            <small>简单图片编辑器</small>
+          </span>
+        </a>
+        <div class="topbar-actions">
+          <button class="ghost-button" id="helpBtn" type="button" title="打开新手教程">
+            <span aria-hidden="true">?</span> 新手教程
+          </button>
+          <button class="primary-button" id="importBtn" type="button" title="导入一张或多张图片">
+            <span aria-hidden="true">＋</span> 导入图片
+          </button>
+          <input id="fileInput" type="file" accept="image/*" multiple hidden />
+        </div>
+      </header>
+
+      <main class="app-main">
+        <aside class="sidebar sidebar-left" aria-label="操作说明与图层">
+          <section class="guide-card">
+            <div class="eyebrow">3 步上手</div>
+            <h1>把图片处理得刚刚好</h1>
+            <ol class="guide-steps">
+              <li>
+                <span class="step-number">1</span>
+                <div><strong>导入素材</strong><small>一次可选择多张图片</small></div>
+              </li>
+              <li>
+                <span class="step-number">2</span>
+                <div><strong>连续分割</strong><small>可划多条线，右键选区域删除</small></div>
+              </li>
+              <li>
+                <span class="step-number">3</span>
+                <div><strong>拼接并导出</strong><small>保留透明背景，直接用于游戏</small></div>
+              </li>
+            </ol>
+          </section>
+
+          <section class="panel-block layers-panel">
+            <div class="panel-heading">
+              <div>
+                <div class="eyebrow">素材</div>
+                <h2>图层 <span id="layerCount">0</span></h2>
+              </div>
+              <button class="small-icon-button" id="addMoreBtn" type="button" title="继续添加图片" aria-label="继续添加图片">＋</button>
+            </div>
+            <div class="layers-list" id="layersList">
+              <div class="list-empty">还没有图片</div>
+            </div>
+            <p class="panel-copy">勾选需要拼接的图片；点击缩略图可选中并移动。</p>
+          </section>
+
+          <div class="privacy-note">
+            <span class="privacy-icon" aria-hidden="true">⌁</span>
+            <span>图片只在本机处理，不会上传。</span>
+          </div>
+        </aside>
+
+        <section class="editor-column" aria-label="图片编辑工作区">
+          <div class="editor-toolbar">
+            <div class="tool-group" role="toolbar" aria-label="编辑工具">
+              <button class="tool-button active" data-mode="move" type="button" title="拖动图片调整位置">
+                <span class="tool-glyph" aria-hidden="true">↔</span>
+                <span>移动</span>
+              </button>
+              <button class="tool-button" data-mode="split" type="button" title="左键连续划线分割，右键点击区域打开处理菜单">
+                <span class="tool-glyph" aria-hidden="true">╱</span>
+                <span>直线分割</span>
+              </button>
+              <button class="tool-button" data-mode="erase" type="button" title="按住鼠标划掉不需要的部分">
+                <span class="tool-glyph" aria-hidden="true">✂</span>
+                <span>画线裁掉</span>
+              </button>
+              <button class="tool-button" data-mode="bg" type="button" title="点击背景色自动变透明">
+                <span class="tool-glyph" aria-hidden="true">◌</span>
+                <span>变透明</span>
+              </button>
+            </div>
+            <div class="toolbar-actions">
+              <button class="delete-selection-button" id="deleteSelectionBtn" type="button" title="删除当前选中的切割区域" hidden><span aria-hidden="true">⌫</span> 删除选中区域</button>
+              <button class="icon-button" id="undoBtn" type="button" title="撤销（Ctrl / ⌘ + Z）" aria-label="撤销">↶</button>
+              <button class="icon-button" id="redoBtn" type="button" title="重做（Ctrl / ⌘ + Shift + Z）" aria-label="重做">↷</button>
+              <span class="toolbar-divider" aria-hidden="true"></span>
+              <button class="icon-button" id="resetViewBtn" type="button" title="重置画布位置" aria-label="重置画布位置">⌂</button>
+            </div>
+          </div>
+
+          <div class="canvas-frame" id="dropZone">
+            <div class="view-toolbar" role="group" aria-label="画布缩放">
+              <span class="view-tip">放大精修 · Ctrl + 滚轮</span>
+              <div class="zoom-controls">
+                <button id="zoomOutBtn" type="button" title="缩小画布" aria-label="缩小画布">−</button>
+                <output id="zoomValue" aria-live="polite">100%</output>
+                <button id="zoomInBtn" type="button" title="放大画布" aria-label="放大画布">＋</button>
+                <button id="zoomActualBtn" type="button" title="以实际像素显示">1:1</button>
+                <button id="fitCanvasBtn" type="button" aria-pressed="true">适应画布</button>
+              </div>
+            </div>
+            <div class="canvas-wrap mode-move" id="canvasWrap">
+              <div class="canvas-stage" id="canvasStage">
+              <canvas id="editorCanvas" width="960" height="640" tabindex="0" aria-label="图片编辑画布，左键划线分割，右键选择区域进行处理" aria-haspopup="menu" aria-describedby="modeHint"></canvas>
+              </div>
+              <div class="canvas-empty" id="emptyState">
+                <div class="empty-illustration generated-accent" aria-hidden="true"></div>
+                <strong>把图片放到这里</strong>
+                <span>拖入图片，或点击上方“导入图片”</span>
+                <button class="text-button" id="emptyImportBtn" type="button">选择图片</button>
+              </div>
+            </div>
+            <div class="canvas-footer">
+              <span id="modeHint">拖动图片调整位置</span>
+              <span class="canvas-size" id="canvasSizeLabel">960 × 640</span>
+            </div>
+          </div>
+
+          <div class="asset-strip">
+            <div class="strip-heading">
+              <div>
+                <span class="eyebrow">已导入</span>
+                <strong>素材预览</strong>
+              </div>
+              <button class="text-button" id="stripAddBtn" type="button"><span aria-hidden="true">＋</span> 添加</button>
+            </div>
+            <div class="layer-strip" id="layerStrip">
+              <span class="strip-empty">导入后，图片会出现在这里</span>
+            </div>
+          </div>
+        </section>
+
+        <aside class="sidebar sidebar-right" aria-label="工具设置与导出">
+          <section class="panel-block tool-settings">
+            <div class="eyebrow">当前工具</div>
+            <h2 id="toolTitle">移动图片</h2>
+            <p class="tool-description" id="toolDescription">拖动图片调整位置。可以把多张图先放到同一张画布。</p>
+
+            <div class="control-block" id="brushControl" hidden>
+              <div class="control-label"><span>笔刷大小</span><output id="brushSizeValue">48 px</output></div>
+              <input id="brushSize" type="range" min="8" max="160" value="48" step="4" />
+              <div class="range-hint"><span>细</span><span>粗</span></div>
+            </div>
+
+            <div class="control-block" id="toleranceControl" hidden>
+              <div class="control-label"><span>颜色容差</span><output id="toleranceValue">32</output></div>
+              <input id="tolerance" type="range" min="0" max="100" value="32" step="1" />
+              <div class="range-hint"><span>相近颜色</span><span>更多颜色</span></div>
+            </div>
+
+            <div class="control-block" id="splitControl" hidden>
+              <div class="control-label"><span>分割方式</span><output id="splitModeValue">直线预览</output></div>
+              <div class="segmented-control split-mode-control" role="group" aria-label="分割方式">
+                <button class="segment" data-split-mode="freehand" type="button">自由轨迹</button>
+                <button class="segment active" data-split-mode="straight" type="button">直线预览</button>
+              </div>
+              <p class="panel-copy">左键拖动可连续切割。右键可删除区域，或“拆成独立图片”后移动、拼接。</p>
+            </div>
+          </section>
+
+          <section class="panel-block stitch-panel">
+            <div class="eyebrow">多图拼接</div>
+            <h2>排成一张图</h2>
+            <p class="panel-copy">勾选图片后横向或纵向贴边拼接，间距为 0，自动去掉外围透明空白。自由摆放后可按当前位置合成，保留你的布局。</p>
+            <button class="secondary-button full-width" id="separateBtn" type="button" disabled>拆成独立图片</button>
+            <p class="panel-copy" id="stitchCount" role="status">已勾选 0 张可见图片</p>
+            <div class="segmented-control" role="group" aria-label="拼接方向">
+              <button class="segment active" data-stitch="horizontal" type="button"><span aria-hidden="true">↔</span> 横向</button>
+              <button class="segment" data-stitch="vertical" type="button"><span aria-hidden="true">↕</span> 纵向</button>
+            </div>
+            <button class="secondary-button full-width" id="stitchBtn" type="button" title="按所选方向贴边拼接，自动去掉外围透明空白"><span aria-hidden="true">▦</span> 贴边拼接成一张图</button>
+            <button class="secondary-button full-width" id="mergePositionBtn" type="button" title="保留勾选图片之间的位置关系，合成可继续编辑的一张图">按当前位置合成</button>
+          </section>
+
+          <section class="panel-block export-panel">
+            <div class="eyebrow">完成</div>
+            <h2>导出图片</h2>
+            <p class="panel-copy">只导出裁剪后的内容，不含编辑画布。多张未合并的可见图片按素材预览顺序自动竖向无间距拼接；已合并的图片保留布局。隐藏图片不导出。</p>
+            <div class="export-preview"><span class="checker-swatch" aria-hidden="true"></span><span>PNG · 保留透明背景</span></div>
+            <div class="export-destination">
+              <p id="exportDestination" role="status">保存位置：桌面 / 任意裁</p>
+              <button class="text-button" id="openExportFolderBtn" type="button" hidden>打开导出文件夹 ↗</button>
+            </div>
+            <button class="secondary-button full-width auto-bg-button" id="autoBgBtn" type="button" title="去除当前图层边缘背景并导出"><span aria-hidden="true">✦</span> 当前图层自动去背</button>
+            <button class="primary-button full-width export-button" id="exportBtn" type="button"><span aria-hidden="true">↓</span> 导出透明 PNG</button>
+            <button class="danger-button full-width" id="clearBtn" type="button"><span aria-hidden="true">×</span> 清空画布</button>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <div class="image-context-menu" id="imageContextMenu" role="menu" aria-label="图片处理" hidden>
+      <div class="context-menu-title" id="contextMenuTitle" role="presentation">已选中图片</div>
+      <button class="context-menu-item context-menu-delete" id="contextDeleteBtn" role="menuitem" type="button">删除图片</button>
+      <button class="context-menu-item" id="contextSeparateBtn" role="menuitem" type="button" hidden>拆成独立图片</button>
+      <button class="context-menu-item" id="contextClearCutsBtn" role="menuitem" type="button" hidden>清除分割线</button>
+      <button class="context-menu-item" id="contextCancelBtn" role="menuitem" type="button">取消选择</button>
+    </div>
+
+    <div class="modal-backdrop" id="helpModal" hidden>
+      <section class="help-modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+        <div class="modal-header">
+          <div>
+            <div class="eyebrow">快速教程</div>
+            <h2 id="helpTitle">三步完成一张素材图</h2>
+          </div>
+          <button class="icon-button" id="closeHelpBtn" type="button" title="关闭教程" aria-label="关闭教程">×</button>
+        </div>
+        <div class="help-grid">
+          <article class="help-step"><span>01</span><h3>导入</h3><p>点击“导入图片”，可以一次选中多张图。也可以直接把文件拖进画布。</p></article>
+          <article class="help-step"><span>02</span><h3>分割</h3><p>选择“直线分割”，按住左键连续划多条线。右键点击切出的任意区域，在处理菜单中选择“删除选中区域”。也可单击选中后点顶部删除。图层右侧的 × 可删除整张图片。</p></article>
+          <article class="help-step"><span>03</span><h3>拼接与导出</h3><p>切割后点“拆成独立图片”即可分别移动。勾选后贴边拼接，或按当前位置合成。直接导出会裁去外围透明空白；多张未合并图片自动竖向拼接，间距为 0。隐藏图片不导出，勾选框仅控制手动拼接。</p></article>
+        </div>
+        <div class="modal-tip"><span aria-hidden="true">＋</span> 精细编辑：点画布上方的 ＋ / − 或按 Ctrl + 滚轮缩放，最高 800%。放大后用滚动条查看四周，“适应画布”查看全图。缩放不改变图片像素。“当前图层自动去背”可清除边缘背景色并导出 PNG。</div>
+      </section>
+    </div>
+
+
+    <script src="export-store.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
